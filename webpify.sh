@@ -27,45 +27,42 @@
 #   MIT
 # ------------------------------------------------------------
 
-set -euo pipefail
-IFS=$'\n\t'
-
+# Input directory (default current folder)
 INPUT_DIR="${1:-.}"
-QUALITY="${2:-80}"
+
+# Output directory inside the current folder
 OUTPUT="$INPUT_DIR/converted"
 
-command -v cwebp >/dev/null 2>&1 || {
-  echo "âŒ Error: cwebp is not installed."
-  echo "Install via: sudo apt install webp  |  brew install webp"
-  exit 1
-}
-
+# Make sure the directory exists
 mkdir -p "$OUTPUT"
 
-echo "í³‚ Input:   $INPUT_DIR"
-echo "í³ Output:  $OUTPUT"
-echo "í¾šï¸ Quality: $QUALITY"
+# Supported extensions
+EXTENSIONS="jpg jpeg png gif bmp tiff JPG JPEG PNG GIF BMP TIFF"
+
+echo "Converting images from: $INPUT_DIR"
+echo "Saving to: $OUTPUT"
 echo ""
 
 count=0
 
-while IFS= read -r img; do
-  filename="$(basename "$img")"
-  name="${filename%.*}"
+for ext in $EXTENSIONS; do
+    for img in "$INPUT_DIR"/*.$ext; do
+        [ -e "$img" ] || continue
 
-  if [[ -f "$OUTPUT/$name.webp" ]]; then
-    echo "â­ï¸  Skipping $filename"
-    continue
-  fi
+        filename=$(basename "$img")
+        name="${filename%.*}"
 
-  cwebp "$img" -q "$QUALITY" -o "$OUTPUT/$name.webp" >/dev/null
-  echo "âœ” $filename â†’ converted/$name.webp"
-  ((count++))
+        # Skip if already converted
+        if [[ -f "$OUTPUT/$name.webp" ]]; then
+            echo "Skipping $filename (already converted)"
+            continue
+        fi
 
-done < <(
-  find "$INPUT_DIR" -maxdepth 1 -type f \
-    \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.gif" -o -iname "*.bmp" -o -iname "*.tiff" \)
-)
+        cwebp "$img" -q 80 -o "$OUTPUT/$name.webp"
+        echo "$filename â†’ converted/$name.webp"
+        ((count++))
+    done
+done
 
 echo ""
-echo "í¾‰ Done! Converted $count image(s)."
+echo "Done! Converted $count new image(s)."
